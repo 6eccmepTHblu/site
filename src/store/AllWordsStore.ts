@@ -8,13 +8,11 @@ export const useAllWords = defineStore('allWord', () => {
 
   // Common methods
   function fillListAllWords(data: Word[]): void {
-    console.log('Заполнение списка словарных слов')
     wordsAll.value = data
   }
 
   // Request
-  async function fetchWords(): Promise<Word[]> {
-    console.log('Получение списка словарных слов')
+  async function fetchAllWords(): Promise<Word[]> {
     const response = await fetch(API_WORDS_URL)
     if (!response.ok) {
       throw new Error('Network response was not ok')
@@ -24,7 +22,7 @@ export const useAllWords = defineStore('allWord', () => {
 
   return {
     wordsAll,
-    fetchWords,
+    fetchAllWords,
     fillListAllWords,
   }
 })

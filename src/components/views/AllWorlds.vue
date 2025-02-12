@@ -12,25 +12,27 @@
   import Button from 'primevue/button'
   import ProgressSpinner from 'primevue/progressspinner';
 
-  // === import Store =================================
+  // === Store =================================
   const allWords = useAllWords()
   const vocabulary = useVocabulary()
 
   // === Drawer =================================
   const visible = defineModel<boolean>('visible')
 
-  // === Фdd words in list AllWords =================================
+  // === Logic =================================
+  //  Add words in list AllWords
   const { isLoading } = useQuery<Word[], Error>(
     'allWords',
-    allWords.fetchWords,
+    allWords.fetchAllWords,
     {
       onSuccess: (fetchedData: Word[]) => {
         allWords.fillListAllWords(fetchedData)
       },
+      enabled: visible,
     }
   )
 
-  // === Button add word in list practices =================================
+  // Button add word in list practices
   const addWord = (word: Word) => {
     vocabulary.addWord(word)
   }
@@ -46,7 +48,9 @@
     </template>
 
     <!-- === List item for all words ================================================== -->
-    <ProgressSpinner v-if="isLoading"/>
+    <div v-if="isLoading" class="flex items-center justify-center h-full">
+      <ProgressSpinner />
+    </div>
     <TransitionGroup v-else name="allWords" tag="ul">
       <li
         v-for="word in allWords.wordsAll"

@@ -1,9 +1,11 @@
 <script setup lang="ts">
+  // === import =================================
+  // vue
   import { ref } from 'vue'
-
-  // Import Vue modules
+  // Views
   import AllWorlds from '../views/AllWorlds.vue'
 
+  // === Logic =================================
   // Hamburger button menu
   const isMenuOpen = ref(false)
 
