@@ -1,24 +1,36 @@
 <script setup lang="ts">
-  // === import Type =================================
+  // === import =================================
+  // vue-query
+  import { useQuery } from 'vue-query'
+  // type
   import type { Word } from '../../types/Word.ts'
+  // store
+  import { useAllWords } from '../../store/AllWordsStore.ts'
+  import { useVocabulary } from '../../store/VocabularyState.ts'
+  // primevue
+  import Drawer from 'primevue/drawer'
+  import Button from 'primevue/button'
+  import ProgressSpinner from 'primevue/progressspinner';
 
   // === import Store =================================
-  import { useAllWords } from '../../store/AllWordsStore.ts'
-
   const allWords = useAllWords()
-
-  import { useVocabulary } from '../../store/VocabularyState.ts'
-
   const vocabulary = useVocabulary()
 
   // === Drawer =================================
-  import Drawer from 'primevue/drawer'
-
   const visible = defineModel<boolean>('visible')
 
-  // === Button add word in list practices =================================
-  import Button from 'primevue/button'
+  // === Фdd words in list AllWords =================================
+  const { isLoading } = useQuery<Word[], Error>(
+    'allWords',
+    allWords.fetchWords,
+    {
+      onSuccess: (fetchedData: Word[]) => {
+        allWords.fillListAllWords(fetchedData)
+      },
+    }
+  )
 
+  // === Button add word in list practices =================================
   const addWord = (word: Word) => {
     vocabulary.addWord(word)
   }
@@ -34,7 +46,8 @@
     </template>
 
     <!-- === List item for all words ================================================== -->
-    <TransitionGroup name="allWords" tag="ul">
+    <ProgressSpinner v-if="isLoading"/>
+    <TransitionGroup v-else name="allWords" tag="ul">
       <li
         v-for="word in allWords.wordsAll"
         :key="word.id"
