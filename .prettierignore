@@ -1,0 +1,4 @@
+# Ignore artifacts:
+build
+coverage
+!/node_modules/vite-plugin-vue-devtools/client/assets/index-8iTKmI6V.css
