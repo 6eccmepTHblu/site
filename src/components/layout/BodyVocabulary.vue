@@ -107,7 +107,7 @@
               <div class="flex items-center space-x-2">
                 <span class="text-sm text-gray-600">Repetitions:</span>
                 <span class="px-2 py-1 bg-blue-100 text-blue-800 rounded-full text-sm">
-                  {{ vocabularyStore.activeWord.repetition_count }}/10
+                  {{ vocabularyStore.activeWord.repetition_count }}/{{settingsStore.maxRepetitions}}
                 </span>
               </div>
             </div>
@@ -128,22 +128,16 @@
         <!-- === Input ================================================== -->
         <div class="bg-white rounded-lg shadow p-4 mb-4">
           <div class="flex items-center space-x-2">
-            <div class="flex w-full">
-              <FloatLabel variant="on" class="w-full">
-                <InputText
-                  v-model="inputText"
-                  id="on_input_label"
-                  class="scheme-light w-full"
-                  @input="checkInput"
-                />
-                <label for="on_input_label">Введите перевод...</label>
-              </FloatLabel>
-              <FloatLabel variant="on">
+            <div class="w-full">
+              <FloatLabel variant="on" class="mb-2">
                 <InputNumber
                   v-model="settingsStore.maxRepetitions"
                   showButtons
                   buttonLayout="horizontal"
                   id="on_input_number_label"
+                  fluid
+                  :min="1"
+                  :max="100"
                 >
                   <template #incrementbuttonicon>
                     <span class="pi pi-plus" />
@@ -153,6 +147,15 @@
                   </template>
                 </InputNumber>
                 <label for="on_input_number_label">Повторений</label>
+              </FloatLabel>
+              <FloatLabel variant="on" class="w-full">
+                <InputText
+                    v-model="inputText"
+                    id="on_input_label"
+                    class="scheme-light w-full"
+                    @input="checkInput"
+                />
+                <label for="on_input_label">Введите перевод...</label>
               </FloatLabel>
             </div>
           </div>
