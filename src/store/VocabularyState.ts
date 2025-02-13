@@ -53,28 +53,46 @@ export const useVocabularyStore = defineStore('vocabulary', () => {
 
   // Метод/Мутация для добавления числа повторений слова
   const updateRepCountWordMutation = useMutation(
-      async ({ word, count }: { word: Word; count: number }) => {
-        const updateWord = await updateWordInBD(word, { repetition_count: count })
-        return {
-          ...updateWord,
-          repetition_count: count,
+    async ({ word, count }: { word: Word; count: number }) => {
+      const findWord: Word = words.value.find((w) => w.id === word.id)!
+      console.log(
+        'updateRepCountWordMutation ' +
+          findWord.english +
+          ' | ' +
+          findWord.repetition_count +
+          ' - ' +
+          count
+      )
+      const updateWord = await updateWordInBD(findWord, { repetition_count: count })
+      console.log(
+        'updateWord ' + updateWord.english + ' | ' + updateWord.repetition_count + ' - ' + count
+      )
+      return updateWord
+    },
+    {
+      onSuccess: (updatedWord) => {
+        // Обновляем слово в локальном состоянии
+        const index = words.value.findIndex((w) => w.id === updatedWord.id)
+        if (index !== -1) {
+          words.value[index] = updatedWord
         }
+        if (activeWord.value && activeWord.value.id === updatedWord.id) {
+          activeWord.value = updatedWord
+        }
+        // Выбираем новое случайное слово после успешного обновления
+        selectRandomWord()
       },
-      {
-        onSuccess: (mutatedWord) => {
-          addWordInListWords(mutatedWord)
-        },
-        onError: (error) => {
-          console.error('Error updating word:', error)
-        },
-      }
-  )
-  const updateRepCountWord = (word: Word, count: number): boolean => {
-    if (!checkWordInWordsList(word)) {
-      updateRepCountWordMutation.mutate(word, count)
-      return true
     }
-    return false
+  )
+  const updateRepCountWord = (word: Word, count: number): void => {
+    if (checkWordInWordsList(word)) {
+      console.log(
+        'updateRepCountWord ' + word.english + ' | ' + word.repetition_count + ' - ' + count
+      )
+      updateRepCountWordMutation.mutate({ word, count })
+    } else {
+      console.log('updateRepCountWord - word not found')
+    }
   }
 
   // Метод/Мутация для удаления слова из списка практики
@@ -96,6 +114,7 @@ export const useVocabularyStore = defineStore('vocabulary', () => {
     }
   )
   const deleteWord = (word: Word) => {
+    console.log('deleteWord ' + word.english + ' | ' + word.repetition_count)
     deleteWordMutation.mutate(word)
   }
 
@@ -114,23 +133,23 @@ export const useVocabularyStore = defineStore('vocabulary', () => {
 
   // Удаление слов из списка Практики
   const deleteWordsMutation = useMutation(
-      async () => {
-        const response = await fetch(`${API_WORDS_URL}/clear-selected`, {
-          method: 'POST',
-        })
-        if (!response.ok) {
-          throw new Error('Network response was not ok')
-        }
-        return await response.json()
-      },
-      {
-        onSuccess: () => {
-          words.value = []
-        },
-        onError: (error) => {
-          console.error('Error clearing words:', error)
-        }
+    async () => {
+      const response = await fetch(`${API_WORDS_URL}/clear-selected`, {
+        method: 'POST',
+      })
+      if (!response.ok) {
+        throw new Error('Network response was not ok')
       }
+      return await response.json()
+    },
+    {
+      onSuccess: () => {
+        words.value = []
+      },
+      onError: (error) => {
+        console.error('Error clearing words:', error)
+      },
+    }
   )
 
   const deleteWords = () => {
@@ -152,10 +171,18 @@ export const useVocabularyStore = defineStore('vocabulary', () => {
 
   // Выбирает случайное слово из списка
   const selectRandomWord = () => {
+    console.log('selectRandomWord')
     if (words.value.length > 0) {
       const randomIndex = Math.floor(Math.random() * words.value.length)
+      console.log(
+        'selectRandomWord ' +
+          words.value[randomIndex].english +
+          '| ' +
+          words.value[randomIndex].repetition_count
+      )
       activeWord.value = words.value[randomIndex]
     } else {
+      console.log('selectRandomWord ' + null)
       activeWord.value = null
     }
   }
@@ -181,6 +208,6 @@ export const useVocabularyStore = defineStore('vocabulary', () => {
     deleteWord,
     deleteWords,
     selectRandomWord,
-    updateRepCountWord
+    updateRepCountWord,
   }
 })

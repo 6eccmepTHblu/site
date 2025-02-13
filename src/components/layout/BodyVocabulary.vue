@@ -1,7 +1,7 @@
 <script setup lang="ts">
   // === import =================================
   // vue
-  import { ref } from 'vue'
+  import { ref, watch } from 'vue'
   // vue-query
   import { useQuery } from 'vue-query'
   // type
@@ -35,6 +35,8 @@
 
   // Написание слова
   const inputText = ref('')
+  // Перевод
+  const translations = ref('***')
 
   // Проверка введённого слова, с русскими переводами
   const checkTranslation = (input: string) => {
@@ -50,6 +52,7 @@
 
   // Запуск проверки введённого слова
   const checkInput = () => {
+    console.log('checkInput')
     const input = inputText.value.trim()
     if (!input) return
 
@@ -60,15 +63,19 @@
     }
   }
 
-  // Отработка вверно введённого результата
+  // Отработка в верно введённого результата
   const handleCorrectTranslation = async () => {
+    console.log('handleCorrectTranslation')
     if (!vocabularyStore.activeWord) {
       return false
     }
+    translations.value = vocabularyStore.activeWord.translations.map((t) => t.russian).join(', ')
     const newCount = vocabularyStore.activeWord.repetition_count + 1
+    console.log('newCount ' + newCount)
     vocabularyStore.updateRepCountWord(vocabularyStore.activeWord, newCount)
 
     const shouldRemove = newCount >= settingsStore.maxRepetitions
+    console.log('shouldRemove ' + shouldRemove)
 
     setTimeout(async () => {
       inputText.value = ''
@@ -82,6 +89,15 @@
       }
     }, 1000)
   }
+
+  // === Наблюдатели =======================================================
+  // Наблюдатель за изменением активного слова
+  watch(
+    () => vocabularyStore.activeWord,
+    () => {
+      translations.value = '***'
+    }
+  )
 </script>
 
 <template>
@@ -107,21 +123,15 @@
               <div class="flex items-center space-x-2">
                 <span class="text-sm text-gray-600">Repetitions:</span>
                 <span class="px-2 py-1 bg-blue-100 text-blue-800 rounded-full text-sm">
-                  {{ vocabularyStore.activeWord.repetition_count }}/{{settingsStore.maxRepetitions}}
+                  {{ vocabularyStore.activeWord.repetition_count }}/{{
+                    settingsStore.maxRepetitions
+                  }}
                 </span>
               </div>
             </div>
           </template>
           <template #content>
-            <!--            <p v-if="vocabularyStore.showTranslation" class="text-gray-600">-->
-            <!--            <p class="text-gray-600">-->
-            <!--              {{-->
-            <!--                vocabulary.activeWord.translations-->
-            <!--                  .map((translation) => translation.russian)-->
-            <!--                  .join('; ')-->
-            <!--              }}-->
-            <!--            </p>-->
-            <p class="text-gray-600">***</p>
+            <p class="text-gray-600">{{ translations }}</p>
           </template>
         </Card>
 
@@ -150,10 +160,10 @@
               </FloatLabel>
               <FloatLabel variant="on" class="w-full">
                 <InputText
-                    v-model="inputText"
-                    id="on_input_label"
-                    class="scheme-light w-full"
-                    @input="checkInput"
+                  v-model="inputText"
+                  id="on_input_label"
+                  class="scheme-light w-full"
+                  @input="checkInput"
                 />
                 <label for="on_input_label">Введите перевод...</label>
               </FloatLabel>
