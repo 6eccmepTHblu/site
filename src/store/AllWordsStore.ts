@@ -3,7 +3,7 @@ import { ref } from 'vue'
 import type { Word } from '../types/Word.ts'
 import { API_WORDS_URL } from '../config.ts'
 
-export const useAllWords = defineStore('allWord', () => {
+export const useAllWordsStore = defineStore('allWord', () => {
   const wordsAll = ref<Word[]>([])
 
   // Common methods

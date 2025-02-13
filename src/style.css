@@ -1,1 +1,5 @@
 @import 'tailwindcss';
+
+span[data-pc-name="pcbadge"] {
+    font-size: 10px;
+}

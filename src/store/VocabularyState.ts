@@ -4,7 +4,7 @@ import { useMutation } from 'vue-query'
 import { ref } from 'vue'
 import { API_WORDS_URL } from '../config.ts'
 
-export const useVocabulary = defineStore('vocabulary', () => {
+export const useVocabularyStore = defineStore('vocabulary', () => {
   const words = ref<Word[]>([])
 
   // === БД =======================================================
@@ -23,7 +23,7 @@ export const useVocabulary = defineStore('vocabulary', () => {
     return await response.json()
   }
 
-  // Мутация для обновления данных слова
+  // Метод/Мутация для добавления слова в лист практики
   const addWordMutation = useMutation(
     async (word: Word) => {
       const updateWord = await updateWordInBD(word, { selected: true, repetition_count: 0 })
@@ -44,14 +44,34 @@ export const useVocabulary = defineStore('vocabulary', () => {
       },
     }
   )
-
-  // Метод для добавления слова в список Практики
   const addWord = (word: Word): boolean => {
     if (!checkWordInWordsList(word)) {
       addWordMutation.mutate(word)
       return true
     }
     return false
+  }
+
+  // Метод/Мутация для удаления слова из списка практики
+  const deleteWordMutation = useMutation(
+      async (word: Word) => {
+        const updateWord = await updateWordInBD(word, { selected: false})
+        return {
+          ...updateWord,
+          selected: false,
+        }
+      },
+      {
+        onSuccess: (mutatedWord) => {
+          words.value = words.value.filter((w) => w.id !== mutatedWord.id)
+        },
+        onError: (error) => {
+          console.error('Error deleting word:', error)
+        },
+      }
+  )
+  const deleteWord = (word: Word) => {
+    deleteWordMutation.mutate(word)
   }
 
   async function fetchSelectedWords(): Promise<Word[]> {
@@ -77,6 +97,7 @@ export const useVocabulary = defineStore('vocabulary', () => {
     addWord,
     checkWordInWordsList,
     fetchSelectedWords,
-    fillListSelectedWords
+    fillListSelectedWords,
+    deleteWord
   }
 })
