@@ -17,24 +17,24 @@
   import FloatLabel from 'primevue/floatlabel'
 
   // === Store =================================
-  const allWords = useAllWordsStore()
-  const vocabulary = useVocabularyStore()
+  const allWordsStore = useAllWordsStore()
+  const vocabularyStore = useVocabularyStore()
 
   // === Drawer =================================
   const visible = defineModel<boolean>('visible')
 
   // === Logic =================================
   //  Add words in list AllWords
-  const { isLoading } = useQuery<Word[], Error>('allWords', allWords.fetchAllWords, {
+  const { isLoading } = useQuery<Word[], Error>('allWords', allWordsStore.fetchAllWords, {
     onSuccess: (fetchedData: Word[]) => {
-      allWords.fillListAllWords(fetchedData)
+      allWordsStore.fillListAllWords(fetchedData)
     },
     enabled: visible,
   })
 
   // Button add word in list practices
   const addWord = (word: Word) => {
-    vocabulary.addWord(word)
+    vocabularyStore.addWord(word)
   }
 
   // === Filters =================================
@@ -43,20 +43,27 @@
 
   // Filtering
   const filteredWords = computed(() => {
-    console.log(dateRange.value)
     if (dateRange.value.length === 0) {
-      return allWords.wordsAll
+      return allWordsStore.wordsAll
     }
 
     const startDate = new Date(dateRange.value[0])
     const endDate = new Date(dateRange.value[1])
     endDate.setHours(23, 59, 59)
 
-    return allWords.wordsAll.filter((word: Word) => {
+    return allWordsStore.wordsAll.filter((word: Word) => {
       const wordDate = new Date(word.created_at)
       return wordDate >= startDate && wordDate <= endDate
     })
   })
+
+  // Add words in list practices
+  const selectAllFilteredWords = () => {
+    const wordsToSelect = filteredWords.value.filter(
+      (word) => !vocabularyStore.checkWordInWordsList(word)
+    )
+    allWordsStore.selectWords(wordsToSelect)
+  }
 
   // Clear filter
   const clearFilter = () => {
@@ -98,17 +105,25 @@
           :badge="filteredWords.length.toString()"
         />
       </div>
+      <div class="flex w-full">
+        <Button
+            @click="selectAllFilteredWords"
+            label="Select All Filtered Words"
+            class="w-full mb-3 p-button-sm p-button-outlined shadow shadow-green-200 shadow-lg"
+            size="small"
+        />
+      </div>
       <TransitionGroup name="allWords" tag="ul">
         <li
           v-for="word in filteredWords"
           :key="word.id"
-          class="mb-4 p-3 bg-slate-700 rounded-lg shadow-purple-400 hover:shadow-md transition-shadow duration-200"
+          class="mb-4 p-3 bg-gray-50 rounded-lg shadow shadow-lg hover:shadow-md transition-shadow duration-200"
         >
           <!-- === Inform for word ================================== -->
           <!-- Line 1 -->
           <div class="flex items-center justify-between">
-            <h3 class="text-sm font-semibold text-purple-200">{{ word.english }}</h3>
-            <span class="text-sm text-gray-300">{{ word.transcription }}</span>
+            <h3 class="text-lg font-semibold text-blue-600">{{ word.english }}</h3>
+            <span class="text-sm text-gray-500">{{ word.transcription }}</span>
           </div>
 
           <!-- Line 2 -->
@@ -116,7 +131,7 @@
             v-if="word.transcription && word.transcription.length"
             class="mt-1 items-center justify-between"
           >
-            <span class="text-sm text-gray-300">
+            <span class="mt-1 text-sm text-gray-600">
               {{ word.translations.map((translation) => translation.russian).join('; ') }}
             </span>
           </div>
@@ -126,13 +141,13 @@
             <div>
               <span
                 v-if="word.remember"
-                class="text-xs bg-yellow-600 text-yellow-100 rounded-full px-2 py-1"
+                class="text-xs bg-yellow-100 text-yellow-800 px-2 py-1 rounded-full"
                 >Remember</span
               >
             </div>
             <Button
               @click="addWord(word)"
-              v-if="!vocabulary.checkWordInWordsList(word)"
+              v-if="!vocabularyStore.checkWordInWordsList(word)"
               unstyled
               icon="pi pi-plus-circle"
               class="text-green-400 hover:text-green-600 hover:scale-120 transform transition-transform"
@@ -144,6 +159,4 @@
   </Drawer>
 </template>
 
-<style scoped>
-
-</style>
+<style scoped></style>

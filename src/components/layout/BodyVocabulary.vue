@@ -1,63 +1,205 @@
 <script setup lang="ts">
   // === import =================================
+  // vue
+  import { ref } from 'vue'
   // vue-query
   import { useQuery } from 'vue-query'
   // type
   import type { Word } from '../../types/Word.ts'
   // store
   import { useVocabularyStore } from '../../store/VocabularyState.ts'
-  import ProgressSpinner from 'primevue/progressspinner'
+  import { usePracticeSettingsStore } from '../../store/SettingStore.ts'
   // primevue
+  import ProgressSpinner from 'primevue/progressspinner'
   import Button from 'primevue/button'
+  import InputText from 'primevue/inputtext'
+  import FloatLabel from 'primevue/floatlabel'
+  import Card from 'primevue/card'
+  import InputNumber from 'primevue/inputnumber'
 
   // === Store =================================
-  const vocabulary = useVocabularyStore()
+  const vocabularyStore = useVocabularyStore()
+  const settingsStore = usePracticeSettingsStore()
 
   // === Logic =================================
   // Загрузка выбранных слов при монтировании
-  const { isLoading } = useQuery<Word[], Error>('wordsPractice', vocabulary.fetchSelectedWords, {
-    onSuccess: (data: Word[]) => {
-      vocabulary.fillListSelectedWords(data)
-    },
-  })
+  const { isLoading } = useQuery<Word[], Error>(
+    'wordsPractice',
+    vocabularyStore.fetchSelectedWords,
+    {
+      onSuccess: (data: Word[]) => {
+        vocabularyStore.fillListSelectedWords(data)
+      },
+    }
+  )
+
+  // Написание слова
+  const inputText = ref('')
+
+  // Проверка введённого слова, с русскими переводами
+  const checkTranslation = (input: string) => {
+    if (!vocabularyStore.activeWord) {
+      return false
+    }
+    const inputLower = input.toLowerCase().trim()
+    const translationsLower = vocabularyStore.activeWord.translations.map((t) =>
+      t.russian.toLowerCase().trim()
+    )
+    return translationsLower.includes(inputLower)
+  }
+
+  // Запуск проверки введённого слова
+  const checkInput = () => {
+    const input = inputText.value.trim()
+    if (!input) return
+
+    const isCorrect: boolean = checkTranslation(input)
+
+    if (isCorrect) {
+      handleCorrectTranslation()
+    }
+  }
+
+  // Отработка вверно введённого результата
+  const handleCorrectTranslation = async () => {
+    if (!vocabularyStore.activeWord) {
+      return false
+    }
+    const newCount = vocabularyStore.activeWord.repetition_count + 1
+    vocabularyStore.updateRepCountWord(vocabularyStore.activeWord, newCount)
+
+    const shouldRemove = newCount >= settingsStore.maxRepetitions
+
+    setTimeout(async () => {
+      inputText.value = ''
+
+      // Получаем следующее слово только если слово не будет удалено
+      if (shouldRemove) {
+        if (!vocabularyStore.activeWord) {
+          return false
+        }
+        vocabularyStore.deleteWord(vocabularyStore.activeWord)
+      }
+    }, 1000)
+  }
 </script>
 
 <template>
   <main class="flex p-4">
     <div class="max-w-4xl mx-auto space-y-4 w-full">
+      <!-- === Loading ================================================== -->
       <div v-if="isLoading" class="flex items-center justify-center h-full">
         <ProgressSpinner />
       </div>
-      <div v-else class="rounded-lg shadow-md p-2">
-        <h3 class="text-xl font-semibold text-gray-800 mb-2">Words of practices</h3>
-        <TransitionGroup name="words" tag="ul" class="container">
-          <li
-            v-for="word in vocabulary.words"
-            :key="word.id"
-            class="w-full mb-4 rounded-lg shadow-purple-400 hover:shadow-md transition-shadow duration-200"
-          >
-            <div
-              class="p-3 bg-gray-50 rounded-lg shadow hover:shadow-md transition-all duration-300"
-            >
-              <div class="flex justify-between items-center">
-                <h3 class="text-lg font-semibold text-blue-600">{{ word.english }}</h3>
-                <span class="text-sm text-gray-500">{{ word.transcription }}</span>
+      <div v-else class="rounded-lg">
+        <!-- === Word info ================================================== -->
+        <Card v-if="vocabularyStore.activeWord" class="shadow-md mb-4">
+          <template #title>
+            <div class="flex justify-between items-center">
+              <div>
+                <h2 class="text-2xl font-bold text-gray-800">
+                  {{ vocabularyStore.activeWord.english }}
+                </h2>
+                <span v-if="vocabularyStore.activeWord.transcription" class="text-sm text-gray-500">
+                  {{ vocabularyStore.activeWord.transcription }}
+                </span>
               </div>
-              <div class="mt-1 flex justify-between items-center">
-                <span v-if="word.translations.length" class="mt-1 text-sm text-gray-600">{{
-                  word.translations.map((t) => t.russian).join('; ')
-                }}</span>
-
-                <Button
-                  @click="vocabulary.deleteWord(word)"
-                  icon="pi pi-trash tex"
-                  unstyled
-                  class="mt-2 text-black hover:text-gray-800 hover:scale-120 transform transition-transform"
-                />
+              <div class="flex items-center space-x-2">
+                <span class="text-sm text-gray-600">Repetitions:</span>
+                <span class="px-2 py-1 bg-blue-100 text-blue-800 rounded-full text-sm">
+                  {{ vocabularyStore.activeWord.repetition_count }}/10
+                </span>
               </div>
             </div>
-          </li>
-        </TransitionGroup>
+          </template>
+          <template #content>
+            <!--            <p v-if="vocabularyStore.showTranslation" class="text-gray-600">-->
+            <!--            <p class="text-gray-600">-->
+            <!--              {{-->
+            <!--                vocabulary.activeWord.translations-->
+            <!--                  .map((translation) => translation.russian)-->
+            <!--                  .join('; ')-->
+            <!--              }}-->
+            <!--            </p>-->
+            <p class="text-gray-600">***</p>
+          </template>
+        </Card>
+
+        <!-- === Input ================================================== -->
+        <div class="bg-white rounded-lg shadow p-4 mb-4">
+          <div class="flex items-center space-x-2">
+            <div class="flex w-full">
+              <FloatLabel variant="on" class="w-full">
+                <InputText
+                  v-model="inputText"
+                  id="on_input_label"
+                  class="scheme-light w-full"
+                  @input="checkInput"
+                />
+                <label for="on_input_label">Введите перевод...</label>
+              </FloatLabel>
+              <FloatLabel variant="on">
+                <InputNumber
+                  v-model="settingsStore.maxRepetitions"
+                  showButtons
+                  buttonLayout="horizontal"
+                  id="on_input_number_label"
+                >
+                  <template #incrementbuttonicon>
+                    <span class="pi pi-plus" />
+                  </template>
+                  <template #decrementbuttonicon>
+                    <span class="pi pi-minus" />
+                  </template>
+                </InputNumber>
+                <label for="on_input_number_label">Повторений</label>
+              </FloatLabel>
+            </div>
+          </div>
+        </div>
+
+        <!-- === List words ================================================== -->
+        <div class="bg-white rounded-lg shadow p-4">
+          <div class="flex justify-between items-center">
+            <h3 class="text-xl font-semibold text-gray-800 mb-6">
+              Words of practices <span class="text-xs">({{ vocabularyStore.words.length }})</span>
+            </h3>
+            <Button
+              @click="vocabularyStore.deleteWords()"
+              icon="pi pi-eraser"
+              unstyled
+              class="text-gray-900"
+            />
+          </div>
+          <TransitionGroup name="words" tag="ul" class="container">
+            <li
+              v-for="word in vocabularyStore.words"
+              :key="word.id"
+              class="w-full mb-4 rounded-lg shadow-purple-400 hover:shadow-md transition-shadow duration-200"
+            >
+              <div
+                class="p-3 bg-gray-50 rounded-lg shadow hover:shadow-md transition-all duration-300"
+              >
+                <div class="flex justify-items-start items-center">
+                  <h3 class="text-lg font-semibold text-blue-600">{{ word.english }}</h3>
+                  <span class="text-xs text-gray-500"> ({{ word.transcription }})</span>
+                </div>
+                <div class="mt-1 flex justify-between items-center">
+                  <span v-if="word.translations.length" class="mt-1 text-sm text-gray-600">{{
+                    word.translations.map((t) => t.russian).join('; ')
+                  }}</span>
+
+                  <Button
+                    @click="vocabularyStore.deleteWord(word)"
+                    icon="pi pi-trash tex"
+                    unstyled
+                    class="mt-2 text-black hover:text-gray-800 hover:scale-120 transform transition-transform"
+                  />
+                </div>
+              </div>
+            </li>
+          </TransitionGroup>
+        </div>
       </div>
     </div>
   </main>
