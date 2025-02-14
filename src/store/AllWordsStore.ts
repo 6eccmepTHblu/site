@@ -27,7 +27,7 @@ export const useAllWordsStore = defineStore('allWord', () => {
 
   // Отмечаем слова из списка в БД как выбранные
   const selectWordsMutation = useMutation(
-    async (wordsToSelect: Partial<Word>[]) => {
+    async (wordsToSelect: []) => {
       const response = await fetch(`${API_WORDS_URL}/select-words`, {
         method: 'POST',
         headers: {
@@ -38,10 +38,10 @@ export const useAllWordsStore = defineStore('allWord', () => {
       if (!response.ok) {
         throw new Error('Network response was not ok')
       }
-      return await response.json()
+      return wordsToSelect
     },
     {
-      onSuccess: (selectedWords: Word[]) => {
+      onSuccess: (selectedWords: []) => {
         const countWord: number = vocabularyStore.words.length
         selectedWords.forEach((word) => {
           vocabularyStore.addWordInListWords(word)
@@ -58,7 +58,7 @@ export const useAllWordsStore = defineStore('allWord', () => {
 
   const selectWords = (wordsToSelect: Word[]) => {
     const updatedWords = wordsToSelect.map((word) => ({
-      id: word.id,
+      ...word,
       selected: true,
       repetition_count: 0,
     }))
