@@ -18,7 +18,7 @@
   import FloatLabel from 'primevue/floatlabel'
   import Card from 'primevue/card'
   import InputNumber, { type InputNumberInputEvent } from 'primevue/inputnumber'
-  import ToggleButton, {type ToggleButtonEmitsOptions} from 'primevue/togglebutton'
+  import ToggleButton from 'primevue/togglebutton'
 
   // === Store =================================
   const vocabularyStore = useVocabularyStore()
