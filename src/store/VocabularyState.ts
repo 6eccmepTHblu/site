@@ -10,7 +10,11 @@ export const useVocabularyStore = defineStore('vocabulary', () => {
   // Активное слово для практики
   const activeWord = ref<Word | null>(null)
   // Нужно ли показывать перевод
+  const showTranslation = ref(false)
+  // Верно введённое слово
   const rightAnswer = ref(false)
+  // Открыть подсказку
+  const showSuggestion = ref(false)
 
   // === БД =======================================================
   // Обновление данных слова в базе данных
@@ -172,6 +176,7 @@ export const useVocabularyStore = defineStore('vocabulary', () => {
   const selectRandomWord = () => {
     if (words.value.length > 0) {
       rightAnswer.value = false
+      showTranslation.value = false
       const randomIndex = Math.floor(Math.random() * words.value.length)
       activeWord.value = words.value[randomIndex]
     } else {
@@ -180,14 +185,27 @@ export const useVocabularyStore = defineStore('vocabulary', () => {
   }
 
   // Изменяем видимость перевода
+  const setShowTranslation = (value: boolean) => {
+    showTranslation.value = value
+  }
+
+  // Задет, что введён верный ответ
   const setRightAnswer = (value: boolean) => {
     rightAnswer.value = value
+  }
+
+  // Задет, что запрошена подсказка
+  const setShowSuggestion = (value: boolean) => {
+    showSuggestion.value = value
   }
 
   return {
     words,
     activeWord,
     rightAnswer,
+    showTranslation,
+    showSuggestion,
+    setShowTranslation,
     addWord,
     addWordInListWords,
     checkWordInWordsList,
@@ -198,5 +216,6 @@ export const useVocabularyStore = defineStore('vocabulary', () => {
     selectRandomWord,
     updateRepCountWord,
     setRightAnswer,
+    setShowSuggestion
   }
 })

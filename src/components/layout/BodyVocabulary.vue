@@ -8,18 +8,18 @@
   import type { Word } from '../../types/Word.ts'
   // store
   import { useVocabularyStore } from '../../store/VocabularyState.ts'
-  import { usePracticeSettingsStore } from '../../store/SettingStore.ts'
+  import { useSettingsStore, SettingKey } from '../../store/SettingStore.ts'
   // primevue
   import ProgressSpinner from 'primevue/progressspinner'
   import Button from 'primevue/button'
   import InputText from 'primevue/inputtext'
   import FloatLabel from 'primevue/floatlabel'
   import Card from 'primevue/card'
-  import InputNumber from 'primevue/inputnumber'
+  import InputNumber, { type InputNumberInputEvent } from 'primevue/inputnumber'
 
   // === Store =================================
   const vocabularyStore = useVocabularyStore()
-  const settingsStore = usePracticeSettingsStore()
+  const settingsStore = useSettingsStore()
 
   // === Logic =================================
   // Загрузка выбранных слов при монтировании
@@ -40,7 +40,7 @@
   const inputText = ref('')
 
   // Запуск проверки введённого слова
-  const checkInput = () => {
+  const checkInputText = () => {
     const input = inputText.value.trim()
     if (!input) return
 
@@ -69,12 +69,13 @@
       return false
     }
     vocabularyStore.setRightAnswer(true)
+    vocabularyStore.setShowTranslation(true)
 
     const newCount = vocabularyStore.activeWord.repetition_count + 1
     await vocabularyStore.updateRepCountWord(vocabularyStore.activeWord, newCount)
 
     try {
-      const shouldRemove = newCount >= settingsStore.maxRepetitions
+      const shouldRemove = newCount >= settingsStore.getSetting(SettingKey.MAX_REPETITIONS)
 
       setTimeout(async () => {
         // Получаем следующее слово только если слово не будет удалено
@@ -94,10 +95,23 @@
 
   // Временно показать перевод
   const handleShowTranslation = () => {
-    vocabularyStore.setRightAnswer(true)
+    vocabularyStore.setShowTranslation(true)
+    vocabularyStore.setShowSuggestion(true)
     setTimeout(async () => {
-      vocabularyStore.setRightAnswer(false)
-    }, 1000)
+      vocabularyStore.setShowTranslation(false)
+      vocabularyStore.setShowSuggestion(false)
+    }, 3000)
+  }
+
+  // Обновление настройки числа повторений
+  const updateMaxRepetitions = (event: InputNumberInputEvent) => {
+    if (typeof event.value === 'number') {
+      // Немедленно обновляем локальное значение для отзывчивости UI
+      settingsStore.updateLocalSetting(SettingKey.MAX_REPETITIONS, event.value)
+
+      // Запускаем отложенное обновление на сервере
+      settingsStore.debouncedUpdateMaxRepetitions(event.value)
+    }
   }
 </script>
 
@@ -113,7 +127,10 @@
         <Card
           v-if="vocabularyStore.activeWord"
           class="shadow-md rounded-lg p-4 mb-4 relative transition-all duration-700 ease-in-out"
-          :class="{'bg-green-200 shadow-green-400': vocabularyStore.rightAnswer}"
+          :class="{
+            'bg-green-200 shadow-green-300': vocabularyStore.rightAnswer,
+            'bg-red-200 shadow-red-300': vocabularyStore.showSuggestion,
+          }"
           unstyled
         >
           <template #title>
@@ -134,7 +151,7 @@
             <div class="flex justify-between items-end">
               <p class="text-gray-600">
                 {{
-                  vocabularyStore.rightAnswer
+                  vocabularyStore.showTranslation
                     ? vocabularyStore.activeWord.translations.map((t) => t.russian).join(', ')
                     : '***'
                 }}
@@ -142,7 +159,7 @@
             </div>
             <span
               id="cont"
-              class="absolute bottom-2 right-2 px-1 py-0.5 bg-blue-100 text-blue-800 rounded-full text-xs"
+              class="absolute bottom-2 right-2 px-2 py-0.5 bg-blue-100 text-blue-800 rounded-full text-xs"
             >
               {{ vocabularyStore.activeWord.repetition_count }} из
               {{ settingsStore.maxRepetitions }}
@@ -159,6 +176,7 @@
                   v-model="settingsStore.maxRepetitions"
                   showButtons
                   buttonLayout="horizontal"
+                  @input="updateMaxRepetitions"
                   id="on_input_number_label"
                   fluid
                   :min="1"
@@ -178,7 +196,7 @@
                   v-model="inputText"
                   id="on_input_label"
                   class="scheme-light w-full"
-                  @input="checkInput"
+                  @input="checkInputText"
                 />
                 <label for="on_input_label">Введите перевод...</label>
               </FloatLabel>
