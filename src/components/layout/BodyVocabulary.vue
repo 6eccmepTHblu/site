@@ -1,7 +1,7 @@
 <script setup lang="ts">
   // === import =================================
   // vue
-  import { ref } from 'vue'
+  import { ref, Transition } from 'vue'
   // vue-query
   import { useQuery } from 'vue-query'
   // type
@@ -19,6 +19,9 @@
   import Card from 'primevue/card'
   import InputNumber, { type InputNumberInputEvent } from 'primevue/inputnumber'
   import ToggleButton from 'primevue/togglebutton'
+
+  import ToggleSwitch from 'primevue/toggleswitch';
+
 
   // === Store =================================
   const vocabularyStore = useVocabularyStore()
@@ -106,6 +109,9 @@
   const handleShowTranslation = () => {
     vocabularyStore.setShowTranslation(true)
     vocabularyStore.setShowSuggestion(true)
+    if (vocabularyStore.activeWord && vocabularyStore.activeWord.selected) {
+      updateRemember(false)
+    }
     setTimeout(async () => {
       vocabularyStore.setShowTranslation(false)
       vocabularyStore.setShowSuggestion(false)
@@ -124,10 +130,18 @@
   }
   // Обновление настройки воспроизведения звука
   const updatePlayAudio = (value: boolean) => {
-    console.log(value)
     settingsStore.updateLocalSetting(SettingKey.PLAY_AUDIO, value)
     settingsStore.setSetting.mutate({ key: SettingKey.PLAY_AUDIO, value: value })
   }
+  // Обновление значения "Remember"
+  const updateRemember = (value: boolean) => {
+    if (vocabularyStore.activeWord) {
+      vocabularyStore.updateWordRemember(vocabularyStore.activeWord, value);
+    }
+  }
+
+  // Настройка отображения меню
+  const showMenu = ref(false)
 </script>
 
 <template>
@@ -141,10 +155,18 @@
         <!-- === Settings ================================================== -->
         <Card class="shadow-md rounded-lg mb-4">
           <template #title>
-            <h3 class="text-xl font-semibold text-gray-800">Настройки</h3>
+            <h3 class="text-xl font-semibold text-gray-800" @click="showMenu = !showMenu">Настройки</h3>
           </template>
           <template #content>
-            <div class="flex items-center space-x-2">
+            <Transition
+                enter-active-class="transition ease-out duration-200"
+                enter-from-class="opacity-0 transform scale-95"
+                enter-to-class="opacity-100 transform scale-100"
+                leave-active-class="transition ease-in duration-150"
+                leave-from-class="opacity-100 transform scale-100"
+                leave-to-class="opacity-0 transform scale-95"
+            >
+            <div class="flex items-center space-x-2" v-if="showMenu" >
               <ToggleButton
                   v-model="settingsStore.playAudio"
                   onLabel="Со звуком"
@@ -152,6 +174,7 @@
                   @value-change="updatePlayAudio"
               />
             </div>
+            </Transition>
           </template>
         </Card>
 
@@ -188,13 +211,13 @@
                     : '***'
                 }}
               </p>
+              <ToggleSwitch v-model="vocabularyStore.activeWord.remember" @value-change="updateRemember"/>
             </div>
             <span
               id="cont"
-              class="absolute bottom-2 right-2 px-2 py-0.5 bg-blue-100 text-blue-800 rounded-full text-xs"
+              class="absolute top-0 right-0 px-2 py-0.5 bg-yellow-100 text-yellow-800 rounded-full text-xs"
             >
-              {{ vocabularyStore.activeWord.repetition_count }} из
-              {{ settingsStore.maxRepetitions }}
+              {{ vocabularyStore.activeWord.repetition_count }}
             </span>
           </template>
         </Card>
@@ -243,7 +266,7 @@
             :class="{ 'mb-6': vocabularyStore.words.length > 0 }"
           >
             <h3 class="text-xl font-semibold text-gray-800">
-              Words of practices <span class="text-xs">({{ vocabularyStore.words.length }})</span>
+              Words of practices <span class="text-xs text-blue-600">({{ vocabularyStore.words.length }})</span>
             </h3>
             <Button
               @click="vocabularyStore.deleteWords()"

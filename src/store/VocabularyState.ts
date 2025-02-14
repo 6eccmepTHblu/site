@@ -154,9 +154,24 @@ export const useVocabularyStore = defineStore('vocabulary', () => {
       },
     }
   )
-
   const deleteWords = () => {
     deleteWordsMutation.mutate()
+  }
+
+  // Метод для обновления статуса "запомнить" слова
+  const updateWordRemember = async (word: Word, remember: boolean): Promise<void> => {
+    try {
+      const updatedWord = await updateWordInBD(word, { remember })
+      const index = words.value.findIndex((w) => w.id === updatedWord.id)
+      if (index !== -1) {
+        words.value[index] = updatedWord
+      }
+      if (activeWord.value && activeWord.value.id === updatedWord.id) {
+        activeWord.value.remember = remember
+      }
+    } catch (error) {
+      console.error('Error updating word remember status:', error)
+    }
   }
 
   // === Методы =======================================================
@@ -216,6 +231,7 @@ export const useVocabularyStore = defineStore('vocabulary', () => {
     selectRandomWord,
     updateRepCountWord,
     setRightAnswer,
-    setShowSuggestion
+    setShowSuggestion,
+    updateWordRemember,
   }
 })
