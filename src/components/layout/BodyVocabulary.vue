@@ -1,7 +1,7 @@
 <script setup lang="ts">
   // === import =================================
   // vue
-  import { ref, Transition } from 'vue'
+  import { ref } from 'vue'
   // vue-query
   import { useQuery } from 'vue-query'
   // type
@@ -19,7 +19,6 @@
   import Card from 'primevue/card'
   import InputNumber, { type InputNumberInputEvent } from 'primevue/inputnumber'
   import ToggleButton from 'primevue/togglebutton'
-
   import ToggleSwitch from 'primevue/toggleswitch';
 
 
