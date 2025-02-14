@@ -9,6 +9,8 @@
   // store
   import { useVocabularyStore } from '../../store/VocabularyState.ts'
   import { useSettingsStore, SettingKey } from '../../store/SettingStore.ts'
+  // utils
+  import { playSuccessSound } from '../../utils/audio';
   // primevue
   import ProgressSpinner from 'primevue/progressspinner'
   import Button from 'primevue/button'
@@ -16,6 +18,7 @@
   import FloatLabel from 'primevue/floatlabel'
   import Card from 'primevue/card'
   import InputNumber, { type InputNumberInputEvent } from 'primevue/inputnumber'
+  import ToggleButton, {type ToggleButtonEmitsOptions} from 'primevue/togglebutton'
 
   // === Store =================================
   const vocabularyStore = useVocabularyStore()
@@ -33,6 +36,7 @@
           vocabularyStore.selectRandomWord()
         }
       },
+      refetchOnWindowFocus: false
     }
   )
 
@@ -71,11 +75,16 @@
     vocabularyStore.setRightAnswer(true)
     vocabularyStore.setShowTranslation(true)
 
+    // Воспроизводим звук успеха
+    if (settingsStore.playAudio) {
+      playSuccessSound();
+    }
+
     const newCount = vocabularyStore.activeWord.repetition_count + 1
     await vocabularyStore.updateRepCountWord(vocabularyStore.activeWord, newCount)
 
     try {
-      const shouldRemove = newCount >= settingsStore.getSetting(SettingKey.MAX_REPETITIONS)
+      const shouldRemove = newCount >= settingsStore.maxRepetitions
 
       setTimeout(async () => {
         // Получаем следующее слово только если слово не будет удалено
@@ -100,7 +109,7 @@
     setTimeout(async () => {
       vocabularyStore.setShowTranslation(false)
       vocabularyStore.setShowSuggestion(false)
-    }, 3000)
+    }, 1000)
   }
 
   // Обновление настройки числа повторений
@@ -113,6 +122,12 @@
       settingsStore.debouncedUpdateMaxRepetitions(event.value)
     }
   }
+  // Обновление настройки воспроизведения звука
+  const updatePlayAudio = (value: boolean) => {
+    console.log(value)
+    settingsStore.updateLocalSetting(SettingKey.PLAY_AUDIO, value)
+    settingsStore.setSetting.mutate({ key: SettingKey.PLAY_AUDIO, value: value })
+  }
 </script>
 
 <template>
@@ -123,6 +138,23 @@
         <ProgressSpinner />
       </div>
       <div v-else class="rounded-lg">
+        <!-- === Settings ================================================== -->
+        <Card class="shadow-md rounded-lg mb-4">
+          <template #title>
+            <h3 class="text-xl font-semibold text-gray-800">Настройки</h3>
+          </template>
+          <template #content>
+            <div class="flex items-center space-x-2">
+              <ToggleButton
+                  v-model="settingsStore.playAudio"
+                  onLabel="Со звуком"
+                  offLabel="Без звука"
+                  @value-change="updatePlayAudio"
+              />
+            </div>
+          </template>
+        </Card>
+
         <!-- === Word info ================================================== -->
         <Card
           v-if="vocabularyStore.activeWord"

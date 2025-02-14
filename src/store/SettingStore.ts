@@ -9,6 +9,7 @@ export enum SettingKey {
   MAX_REPETITIONS = 'max_repetitions',
   TRANSLATION_DIRECTION = 'translation_direction',
   CHECK_METHOD = 'check_method',
+  PLAY_AUDIO = 'play_audio',
 }
 
 interface SettingResponse {
@@ -50,6 +51,8 @@ export const useSettingsStore = defineStore('settings', () => {
   const translationDirection = ref('en-ru')
   // Метод проверки
   const checkMethod = ref('writing')
+  // Воспроизводить ли аудио подтверждение правильного ответа
+  const playAudio = ref('writing')
 
   // Получение настройки
   const getSetting = (key: SettingKey) => {
@@ -57,6 +60,7 @@ export const useSettingsStore = defineStore('settings', () => {
       onSuccess: (data: SettingResponse) => {
         updateLocalSetting(key, data.value)
       },
+      refetchOnWindowFocus: false
     })
   }
 
@@ -86,16 +90,18 @@ export const useSettingsStore = defineStore('settings', () => {
   updateLocalSetting(SettingKey.MAX_REPETITIONS, getSetting(SettingKey.MAX_REPETITIONS))
   updateLocalSetting(SettingKey.TRANSLATION_DIRECTION, getSetting(SettingKey.TRANSLATION_DIRECTION))
   updateLocalSetting(SettingKey.CHECK_METHOD, getSetting(SettingKey.CHECK_METHOD))
+  updateLocalSetting(SettingKey.PLAY_AUDIO, getSetting(SettingKey.PLAY_AUDIO))
 
   // Обработка изменения числа повторений
   const debouncedUpdateMaxRepetitions = debounce((value: number) => {
     setSetting.mutate({ key: SettingKey.MAX_REPETITIONS, value: value })
-  }, 1000) // задержка в 1 секунду
+  }, 3000)
 
   return {
     maxRepetitions,
     translationDirection,
     checkMethod,
+    playAudio,
     getSetting,
     setSetting,
     debouncedUpdateMaxRepetitions,
