@@ -68,7 +68,7 @@
     if (!vocabularyStore.activeWord) {
       return false
     }
-    vocabularyStore.setShowTranslation(true)
+    vocabularyStore.setRightAnswer(true)
 
     const newCount = vocabularyStore.activeWord.repetition_count + 1
     await vocabularyStore.updateRepCountWord(vocabularyStore.activeWord, newCount)
@@ -77,8 +77,6 @@
       const shouldRemove = newCount >= settingsStore.maxRepetitions
 
       setTimeout(async () => {
-        inputText.value = ''
-
         // Получаем следующее слово только если слово не будет удалено
         if (shouldRemove) {
           if (!vocabularyStore.activeWord) {
@@ -86,8 +84,9 @@
           }
           await vocabularyStore.deleteWord(vocabularyStore.activeWord)
         }
+        inputText.value = ''
         vocabularyStore.selectRandomWord()
-      }, 1000)
+      }, 500)
     } catch (error) {
       console.error('Error updating word:', error)
     }
@@ -95,9 +94,9 @@
 
   // Временно показать перевод
   const handleShowTranslation = () => {
-    vocabularyStore.setShowTranslation(true)
+    vocabularyStore.setRightAnswer(true)
     setTimeout(async () => {
-      vocabularyStore.setShowTranslation(false)
+      vocabularyStore.setRightAnswer(false)
     }, 1000)
   }
 </script>
@@ -111,7 +110,12 @@
       </div>
       <div v-else class="rounded-lg">
         <!-- === Word info ================================================== -->
-        <Card v-if="vocabularyStore.activeWord" class="shadow-md mb-4 relative">
+        <Card
+          v-if="vocabularyStore.activeWord"
+          class="shadow-md rounded-lg p-4 mb-4 relative transition-all duration-700 ease-in-out"
+          :class="{'bg-green-200 shadow-green-400': vocabularyStore.rightAnswer}"
+          unstyled
+        >
           <template #title>
             <div class="flex justify-between items-center">
               <div>
@@ -130,19 +134,19 @@
             <div class="flex justify-between items-end">
               <p class="text-gray-600">
                 {{
-                  vocabularyStore.showTranslation
+                  vocabularyStore.rightAnswer
                     ? vocabularyStore.activeWord.translations.map((t) => t.russian).join(', ')
                     : '***'
                 }}
               </p>
             </div>
             <span
-                id="cont"
-                class="absolute bottom-2 right-2 px-1 py-0.5 bg-blue-100 text-blue-800 rounded-full text-xs"
+              id="cont"
+              class="absolute bottom-2 right-2 px-1 py-0.5 bg-blue-100 text-blue-800 rounded-full text-xs"
             >
-                {{ vocabularyStore.activeWord.repetition_count }} из
-                {{ settingsStore.maxRepetitions }}
-              </span>
+              {{ vocabularyStore.activeWord.repetition_count }} из
+              {{ settingsStore.maxRepetitions }}
+            </span>
           </template>
         </Card>
 
@@ -184,7 +188,10 @@
 
         <!-- === List words ================================================== -->
         <div class="bg-white rounded-lg shadow p-4">
-          <div class="flex justify-between items-center" :class="{'mb-6': vocabularyStore.words.length > 0}">
+          <div
+            class="flex justify-between items-center"
+            :class="{ 'mb-6': vocabularyStore.words.length > 0 }"
+          >
             <h3 class="text-xl font-semibold text-gray-800">
               Words of practices <span class="text-xs">({{ vocabularyStore.words.length }})</span>
             </h3>
