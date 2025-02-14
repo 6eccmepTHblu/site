@@ -1,12 +1,16 @@
 import { defineStore } from 'pinia'
 import type { Word } from '../types/Word.ts'
 import { useMutation } from 'vue-query'
-import { ref, watch, computed } from 'vue'
+import { ref } from 'vue'
 import { API_WORDS_URL } from '../config.ts'
 
 export const useVocabularyStore = defineStore('vocabulary', () => {
+  // Список слов для практики
   const words = ref<Word[]>([])
+  // Активное слово для практики
   const activeWord = ref<Word | null>(null)
+  // Нужно ли показывать перевод
+  const showTranslation = ref(false)
 
   // === БД =======================================================
   // Обновление данных слова в базе данных
@@ -43,31 +47,22 @@ export const useVocabularyStore = defineStore('vocabulary', () => {
       },
     }
   )
-  const addWord = (word: Word): boolean => {
-    if (!checkWordInWordsList(word)) {
-      addWordMutation.mutate(word)
-      return true
-    }
-    return false
+  const addWord = (word: Word): Promise<void> => {
+    return new Promise((resolve, reject) => {
+      if (!checkWordInWordsList(word)) {
+        addWordMutation.mutate(word, {
+          onSuccess: () => resolve(),
+          onError: (error: unknown) => reject(error),
+        })
+      }
+    })
   }
 
   // Метод/Мутация для добавления числа повторений слова
   const updateRepCountWordMutation = useMutation(
     async ({ word, count }: { word: Word; count: number }) => {
       const findWord: Word = words.value.find((w) => w.id === word.id)!
-      console.log(
-        'updateRepCountWordMutation ' +
-          findWord.english +
-          ' | ' +
-          findWord.repetition_count +
-          ' - ' +
-          count
-      )
-      const updateWord = await updateWordInBD(findWord, { repetition_count: count })
-      console.log(
-        'updateWord ' + updateWord.english + ' | ' + updateWord.repetition_count + ' - ' + count
-      )
-      return updateWord
+      return await updateWordInBD(findWord, { repetition_count: count })
     },
     {
       onSuccess: (updatedWord) => {
@@ -76,22 +71,22 @@ export const useVocabularyStore = defineStore('vocabulary', () => {
         if (index !== -1) {
           words.value[index] = updatedWord
         }
-        if (activeWord.value && activeWord.value.id === updatedWord.id) {
-          activeWord.value = updatedWord
-        }
-        // Выбираем новое случайное слово после успешного обновления
-        selectRandomWord()
       },
     }
   )
-  const updateRepCountWord = (word: Word, count: number): void => {
+  const updateRepCountWord = (word: Word, count: number): Promise<void> => {
     if (checkWordInWordsList(word)) {
-      console.log(
-        'updateRepCountWord ' + word.english + ' | ' + word.repetition_count + ' - ' + count
-      )
-      updateRepCountWordMutation.mutate({ word, count })
+      return new Promise((resolve, reject) => {
+        updateRepCountWordMutation.mutate(
+          { word, count },
+          {
+            onSuccess: () => resolve(),
+            onError: (error: unknown) => reject(error),
+          }
+        )
+      })
     } else {
-      console.log('updateRepCountWord - word not found')
+      return Promise.reject(new Error('Word not found'))
     }
   }
 
@@ -113,9 +108,13 @@ export const useVocabularyStore = defineStore('vocabulary', () => {
       },
     }
   )
-  const deleteWord = (word: Word) => {
-    console.log('deleteWord ' + word.english + ' | ' + word.repetition_count)
-    deleteWordMutation.mutate(word)
+  const deleteWord = (word: Word): Promise<void> => {
+    return new Promise((resolve, reject) => {
+      deleteWordMutation.mutate(word, {
+        onSuccess: () => resolve(),
+        onError: (error: unknown) => reject(error),
+      })
+    })
   }
 
   // Получение списка выбранных слов из базы данных
@@ -171,35 +170,24 @@ export const useVocabularyStore = defineStore('vocabulary', () => {
 
   // Выбирает случайное слово из списка
   const selectRandomWord = () => {
-    console.log('selectRandomWord')
     if (words.value.length > 0) {
+      showTranslation.value = false
       const randomIndex = Math.floor(Math.random() * words.value.length)
-      console.log(
-        'selectRandomWord ' +
-          words.value[randomIndex].english +
-          '| ' +
-          words.value[randomIndex].repetition_count
-      )
       activeWord.value = words.value[randomIndex]
     } else {
-      console.log('selectRandomWord ' + null)
       activeWord.value = null
     }
   }
 
-  // Вычисляемое свойство для длины массива words
-  const wordsCount = computed(() => words.value.length)
-
-  // === Наблюдатели =======================================================
-  // Наблюдатель за изменениями в списке слов
-  watch(wordsCount, () => {
-    console.log('wordsCount changed')
-    selectRandomWord()
-  })
+  // Изменяем видимость перевода
+  const setShowTranslation = (value: boolean) => {
+    showTranslation.value = value
+  }
 
   return {
     words,
     activeWord,
+    showTranslation,
     addWord,
     addWordInListWords,
     checkWordInWordsList,
@@ -209,5 +197,6 @@ export const useVocabularyStore = defineStore('vocabulary', () => {
     deleteWords,
     selectRandomWord,
     updateRepCountWord,
+    setShowTranslation,
   }
 })

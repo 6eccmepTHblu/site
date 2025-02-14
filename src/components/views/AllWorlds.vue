@@ -33,8 +33,11 @@
   })
 
   // Button add word in list practices
-  const addWord = (word: Word) => {
-    vocabularyStore.addWord(word)
+  const addWord = async (word: Word) => {
+    await vocabularyStore.addWord(word)
+    if (vocabularyStore.words.length === 1) {
+      vocabularyStore.selectRandomWord()
+    }
   }
 
   // === Filters =================================
@@ -107,10 +110,10 @@
       </div>
       <div class="flex w-full">
         <Button
-            @click="selectAllFilteredWords"
-            label="Select All Filtered Words"
-            class="w-full mb-3 p-button-sm p-button-outlined shadow shadow-green-200 shadow-lg"
-            size="small"
+          @click="selectAllFilteredWords"
+          label="Select All Filtered Words"
+          class="w-full mb-3 p-button-sm p-button-outlined shadow shadow-green-200 shadow-lg"
+          size="small"
         />
       </div>
       <TransitionGroup name="allWords" tag="ul">

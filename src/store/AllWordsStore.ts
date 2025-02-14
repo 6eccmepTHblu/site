@@ -42,9 +42,13 @@ export const useAllWordsStore = defineStore('allWord', () => {
     },
     {
       onSuccess: (selectedWords: Word[]) => {
+        const countWord: number = vocabularyStore.words.length
         selectedWords.forEach((word) => {
           vocabularyStore.addWordInListWords(word)
         })
+        if (countWord === 0) {
+          vocabularyStore.selectRandomWord()
+        }
       },
       onError: (error) => {
         console.error('Error selecting words:', error)
@@ -53,10 +57,10 @@ export const useAllWordsStore = defineStore('allWord', () => {
   )
 
   const selectWords = (wordsToSelect: Word[]) => {
-    const updatedWords = wordsToSelect.map(word => ({
+    const updatedWords = wordsToSelect.map((word) => ({
       id: word.id,
       selected: true,
-      repetition_count: 0
+      repetition_count: 0,
     }))
     selectWordsMutation.mutate(updatedWords)
   }
@@ -65,6 +69,6 @@ export const useAllWordsStore = defineStore('allWord', () => {
     wordsAll,
     fetchAllWords,
     fillListAllWords,
-    selectWords
+    selectWords,
   }
 })

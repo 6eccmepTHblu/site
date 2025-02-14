@@ -1,7 +1,7 @@
 <script setup lang="ts">
   // === import =================================
   // vue
-  import { ref, watch } from 'vue'
+  import { ref } from 'vue'
   // vue-query
   import { useQuery } from 'vue-query'
   // type
@@ -29,14 +29,27 @@
     {
       onSuccess: (data: Word[]) => {
         vocabularyStore.fillListSelectedWords(data)
+        if (vocabularyStore.words.length > 0) {
+          vocabularyStore.selectRandomWord()
+        }
       },
     }
   )
 
   // Написание слова
   const inputText = ref('')
-  // Перевод
-  const translations = ref('***')
+
+  // Запуск проверки введённого слова
+  const checkInput = () => {
+    const input = inputText.value.trim()
+    if (!input) return
+
+    const isCorrect: boolean = checkTranslation(input)
+
+    if (isCorrect) {
+      handleCorrectTranslation()
+    }
+  }
 
   // Проверка введённого слова, с русскими переводами
   const checkTranslation = (input: string) => {
@@ -50,54 +63,43 @@
     return translationsLower.includes(inputLower)
   }
 
-  // Запуск проверки введённого слова
-  const checkInput = () => {
-    console.log('checkInput')
-    const input = inputText.value.trim()
-    if (!input) return
-
-    const isCorrect: boolean = checkTranslation(input)
-
-    if (isCorrect) {
-      handleCorrectTranslation()
-    }
-  }
-
   // Отработка в верно введённого результата
   const handleCorrectTranslation = async () => {
-    console.log('handleCorrectTranslation')
     if (!vocabularyStore.activeWord) {
       return false
     }
-    translations.value = vocabularyStore.activeWord.translations.map((t) => t.russian).join(', ')
+    vocabularyStore.setShowTranslation(true)
+
     const newCount = vocabularyStore.activeWord.repetition_count + 1
-    console.log('newCount ' + newCount)
-    vocabularyStore.updateRepCountWord(vocabularyStore.activeWord, newCount)
+    await vocabularyStore.updateRepCountWord(vocabularyStore.activeWord, newCount)
 
-    const shouldRemove = newCount >= settingsStore.maxRepetitions
-    console.log('shouldRemove ' + shouldRemove)
+    try {
+      const shouldRemove = newCount >= settingsStore.maxRepetitions
 
-    setTimeout(async () => {
-      inputText.value = ''
+      setTimeout(async () => {
+        inputText.value = ''
 
-      // Получаем следующее слово только если слово не будет удалено
-      if (shouldRemove) {
-        if (!vocabularyStore.activeWord) {
-          return false
+        // Получаем следующее слово только если слово не будет удалено
+        if (shouldRemove) {
+          if (!vocabularyStore.activeWord) {
+            return false
+          }
+          await vocabularyStore.deleteWord(vocabularyStore.activeWord)
         }
-        vocabularyStore.deleteWord(vocabularyStore.activeWord)
-      }
-    }, 1000)
+        vocabularyStore.selectRandomWord()
+      }, 1000)
+    } catch (error) {
+      console.error('Error updating word:', error)
+    }
   }
 
-  // === Наблюдатели =======================================================
-  // Наблюдатель за изменением активного слова
-  watch(
-    () => vocabularyStore.activeWord,
-    () => {
-      translations.value = '***'
-    }
-  )
+  // Временно показать перевод
+  const handleShowTranslation = () => {
+    vocabularyStore.setShowTranslation(true)
+    setTimeout(async () => {
+      vocabularyStore.setShowTranslation(false)
+    }, 1000)
+  }
 </script>
 
 <template>
@@ -109,29 +111,38 @@
       </div>
       <div v-else class="rounded-lg">
         <!-- === Word info ================================================== -->
-        <Card v-if="vocabularyStore.activeWord" class="shadow-md mb-4">
+        <Card v-if="vocabularyStore.activeWord" class="shadow-md mb-4 relative">
           <template #title>
             <div class="flex justify-between items-center">
               <div>
-                <h2 class="text-2xl font-bold text-gray-800">
+                <h2 class="text-2xl font-bold text-gray-800" @click="handleShowTranslation">
                   {{ vocabularyStore.activeWord.english }}
                 </h2>
-                <span v-if="vocabularyStore.activeWord.transcription" class="text-sm text-gray-500">
-                  {{ vocabularyStore.activeWord.transcription }}
-                </span>
               </div>
               <div class="flex items-center space-x-2">
-                <span class="text-sm text-gray-600">Repetitions:</span>
-                <span class="px-2 py-1 bg-blue-100 text-blue-800 rounded-full text-sm">
-                  {{ vocabularyStore.activeWord.repetition_count }}/{{
-                    settingsStore.maxRepetitions
-                  }}
+                <span v-if="vocabularyStore.activeWord.transcription" class="text-sm text-gray-500">
+                  {{ vocabularyStore.activeWord.transcription }}
                 </span>
               </div>
             </div>
           </template>
           <template #content>
-            <p class="text-gray-600">{{ translations }}</p>
+            <div class="flex justify-between items-end">
+              <p class="text-gray-600">
+                {{
+                  vocabularyStore.showTranslation
+                    ? vocabularyStore.activeWord.translations.map((t) => t.russian).join(', ')
+                    : '***'
+                }}
+              </p>
+            </div>
+            <span
+                id="cont"
+                class="absolute bottom-2 right-2 px-1 py-0.5 bg-blue-100 text-blue-800 rounded-full text-xs"
+            >
+                {{ vocabularyStore.activeWord.repetition_count }} из
+                {{ settingsStore.maxRepetitions }}
+              </span>
           </template>
         </Card>
 
@@ -173,8 +184,8 @@
 
         <!-- === List words ================================================== -->
         <div class="bg-white rounded-lg shadow p-4">
-          <div class="flex justify-between items-center">
-            <h3 class="text-xl font-semibold text-gray-800 mb-6">
+          <div class="flex justify-between items-center" :class="{'mb-6': vocabularyStore.words.length > 0}">
+            <h3 class="text-xl font-semibold text-gray-800">
               Words of practices <span class="text-xs">({{ vocabularyStore.words.length }})</span>
             </h3>
             <Button
